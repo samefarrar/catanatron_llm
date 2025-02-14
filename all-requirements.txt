@@ -1,9 +1,5 @@
 attrs==22.2.0
 black==23.1.0
--e catanatron_core
--e catanatron_gym
--e catanatron_server
--e catanatron_experimental
 certifi==2022.12.7
 charset-normalizer==3.1.0
 click==8.1.3
