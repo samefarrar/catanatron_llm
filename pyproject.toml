@@ -73,3 +73,7 @@ packages = [
     "src/catanatron_gym",
     "src/catanatron_server",
 ]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
