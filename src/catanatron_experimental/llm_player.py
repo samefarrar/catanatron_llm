@@ -58,7 +58,7 @@ class LLMPlayer(Player):
     """LLM-powered player that presents game state in a way that Claude can understand."""
     # Class properties to use instead of instance variables
     debug_mode = True
-    
+
     def decide(self, game: Game, playable_actions: List[Action]) -> Action:
         """Present game state and options to Claude in a readable format and choose an action.
 
@@ -70,13 +70,12 @@ class LLMPlayer(Player):
             action (Action): Chosen action from playable_actions
         """
         state = game.state
-
-        # Print game state in a format that's easy for Claude to understand
-        self._print_game_header(game)
-        self._print_board_state(state)
-        self._print_player_states(state)
-        self._print_available_actions(playable_actions)
-
+        if self.debug_mode:
+            print(f"Game ID: {game.id}")
+            self._print_game_header(game)
+            self._print_board_state(state)
+            self._print_player_states(state)
+            self._print_available_actions(playable_actions)
         # In a real implementation, this would connect to Claude via an API
         # For now, we'll randomly select an action
         return self._select_action(playable_actions, state)
@@ -215,22 +214,22 @@ class LLMPlayer(Player):
             # Display player info with emoji
             print(f"\n  {color.name} Player:")
             print(f"    Victory Points: {vp}")
-            print(f"    Resources ({player_num_resource_cards(state, color)} cards):")
-            for resource in RESOURCES:
-                count = freqdeck_count(hand, resource)
-                if count > 0:
-                    print(f"      {RESOURCE_EMOJI[resource]} {resource}: {count}")
+            # print(f"    Resources ({player_num_resource_cards(state, color)} cards):")
+            # for resource in RESOURCES:
+            #     count = freqdeck_count(hand, resource)
+            #     if count > 0:
+            #         print(f"      {RESOURCE_EMOJI[resource]} {resource}: {count}")
 
             # Development cards
-            dev_card_count = player_num_dev_cards(state, color)
-            if dev_card_count > 0:
-                print(f"    Development Cards ({dev_card_count} total):")
-                dev_card_types = ["KNIGHT", "MONOPOLY", "ROAD_BUILDING", "YEAR_OF_PLENTY", "VICTORY_POINT"]
-                for card_type in dev_card_types:
-                    count = state.player_state.get(f"{key}_{card_type}_IN_HAND", 0)
-                    if count > 0:
-                        desc = DEV_CARD_DESCRIPTIONS.get(card_type, "")
-                        print(f"      {card_type}: {count} - {desc}")
+            # dev_card_count = player_num_dev_cards(state, color)
+            # if dev_card_count > 0:
+            #     print(f"    Development Cards ({dev_card_count} total):")
+            #     dev_card_types = ["KNIGHT", "MONOPOLY", "ROAD_BUILDING", "YEAR_OF_PLENTY", "VICTORY_POINT"]
+            #     for card_type in dev_card_types:
+            #         count = state.player_state.get(f"{key}_{card_type}_IN_HAND", 0)
+            #         if count > 0:
+            #             desc = DEV_CARD_DESCRIPTIONS.get(card_type, "")
+            #             print(f"      {card_type}: {count} - {desc}")
 
             # Building information
             print(f"    Buildings:")
@@ -239,12 +238,12 @@ class LLMPlayer(Player):
             print(f"      🛣️ Roads: {state.player_state.get(f'{key}_ROADS_AVAILABLE', 0)}")
             print(f"      Longest Road: {longest_road} segments")
 
-        # Bank information
-        print("\n  🏦 Bank:")
-        # Resource freqdeck is a list where indexes represent resources: [WOOD, BRICK, SHEEP, WHEAT, ORE]
-        for i, resource in enumerate(RESOURCES):
-            print(f"    {RESOURCE_EMOJI[resource]} {resource}: {state.resource_freqdeck[i]}")
-        print(f"    Development Cards remaining: {len(state.development_listdeck)}")
+        # # Bank information
+        # print("\n  🏦 Bank:")
+        # # Resource freqdeck is a list where indexes represent resources: [WOOD, BRICK, SHEEP, WHEAT, ORE]
+        # for i, resource in enumerate(RESOURCES):
+        #     print(f"    {RESOURCE_EMOJI[resource]} {resource}: {state.resource_freqdeck[i]}")
+        # print(f"    Development Cards remaining: {len(state.development_listdeck)}")
 
     def _print_available_actions(self, playable_actions: List[Action]) -> None:
         """Print available actions in a way Claude can understand."""
@@ -270,7 +269,7 @@ class LLMPlayer(Player):
             ActionType.PLAY_MONOPOLY: f"Play Monopoly card - Take all {value} from other players",
             ActionType.PLAY_ROAD_BUILDING: "Play Road Building card - Build two roads for free",
         }
-        
+
         # Return from dictionary if action type is in it
         if action_type in descriptions:
             return descriptions[action_type]
@@ -288,10 +287,29 @@ class LLMPlayer(Player):
         elif action_type == ActionType.MARITIME_TRADE:
             trade_resources = value
             offering = []
-            for i, count in enumerate(trade_resources[:4]):
-                if count > 0:
-                    offering.append(f"{count} {RESOURCES[i]}")
-            receiving = RESOURCES[4] if trade_resources[4] > 0 else None
+
+            # Check if trade_resources contains string values (resource names)
+            if isinstance(trade_resources[0], str):
+                # Count occurrences of each resource
+                resource_counts = {}
+                for resource in trade_resources[:4]:
+                    if resource not in resource_counts:
+                        resource_counts[resource] = 0
+                    resource_counts[resource] += 1
+
+                # Create the offering text
+                for resource, count in resource_counts.items():
+                    offering.append(f"{count} {resource}")
+
+                # Determine what's being received
+                receiving = trade_resources[4] if len(trade_resources) > 4 else None
+            else:
+                # Original code for when trade_resources contains integer counts
+                for i, count in enumerate(trade_resources[:4]):
+                    if isinstance(count, int) and count > 0:
+                        offering.append(f"{count} {RESOURCES[i]}")
+                receiving = RESOURCES[4] if len(trade_resources) > 4 and trade_resources[4] > 0 else None
+
             return f"Trade {', '.join(offering)} for 1 {receiving}"
         elif action_type == ActionType.DISCARD:
             if value is None:
