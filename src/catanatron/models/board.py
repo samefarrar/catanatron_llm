@@ -346,6 +346,46 @@ class Board:
     def is_friendly_road(self, edge, color):
         return self.get_edge_color(edge) == color
 
+    def __str__(self) -> str:
+            lines = []
+            lines.append("=== CATAN BOARD ===")
+            lines.append(f"Robber at: {self.robber_coordinate}")
+            lines.append("")
+
+            # Show tile info (if available)
+            if hasattr(self.map, "land_tiles"):
+                lines.append("Tiles:")
+                # Sort tiles by their coordinate (assumes coordinate is a tuple)
+                for coord, tile in sorted(self.map.land_tiles.items(), key=lambda x: (x[0][1], x[0][0])):
+                    resource = tile.resource if tile.resource is not None else "Desert"
+                    # Assuming tile.nodes is a dict mapping vertex name to node id
+                    node_ids = sorted(tile.nodes.values())
+                    lines.append(f"  Tile {coord}: {resource}  |  Nodes: {node_ids}")
+                lines.append("")
+
+            # List buildings
+            lines.append("Buildings:")
+            if self.buildings:
+                for node in sorted(self.buildings):
+                    color, btype = self.buildings[node]
+                    lines.append(f"  Node {node:2d}: {color.name} {btype}")
+            else:
+                lines.append("  None")
+            lines.append("")
+
+            # List roads (only list one ordering per edge)
+            lines.append("Roads:")
+            seen_edges = set()
+            for edge in sorted(self.roads):
+                # Avoid printing both (a,b) and (b,a)
+                if edge in seen_edges or (edge[1], edge[0]) in seen_edges:
+                    continue
+                seen_edges.add(edge)
+                lines.append(f"  Edge {edge}: {self.roads[edge]}")
+            lines.append("")
+
+            return "\n".join(lines)
+
 
 def longest_acyclic_path(board: Board, node_set: Set[int], color: Color):
     paths = []
